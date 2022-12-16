@@ -1,0 +1,37 @@
+                    caller
+결제 정보 생성      front
+                    (customerid, contract ids, 카드/계좌번호, 금융기관명)
+                        유효성 체크 등 먼저 하고 문제 있으면 오류 리턴
+                        유효성에 문제 없으면 payment management id 채번 & 계약번호,고객번호 등 매핑
+
+결제 정보 조회      front
+                    고객번호로 payment management 조회
+
+결제 내역 조회      front
+                    payment management id로 결제 내역 조회
+
+결제 내역 상세 조회 front
+                    payment id로 결제 내역 조회 (상세)
+
+결제 요청           front
+                    payment management id, contract id 등, 금액 정보 등으로 결제 요청
+                    payment id 반환
+                    PG사로 결제요청 보냄 (카드번호, 금액 등)
+
+환불 요청           front
+                    payment id로 환불 요청
+                    PG사로 환불요청 보냄
+
+결제/환불 결과 반영 PG
+                    결제 결과 반영하고 이벤트 발행 (결제성공 또는 결제실패 또는 환불성공 또는 환불실패)
+
+
+
+배치
+    1. contract에서 결제대상에 대해 금액계산하고 파일로 생성
+    2. 1 파일을 읽어서 적재
+
+    3-1. 2 파일의 상세내역에 매출항목 매핑
+
+    4-1. 2 파일을 payment management 단위로 그룹핑하여 파일 생성하여 pg에 파일전송
+    4-2. pg로부터 결제 성공/실패 내역 받아서 결과 반영
