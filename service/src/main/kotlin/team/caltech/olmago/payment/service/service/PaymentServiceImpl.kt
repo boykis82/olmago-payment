@@ -16,30 +16,27 @@ class PaymentServiceImpl(
   ) : PaymentService {
 
   @Transactional
-  override fun requestPayment(cmd: PaymentRequestCommand): PaymentRequestResponse {
-    val paymentInformation = paymentInformationService.searchPaymentInformation(cmd.paymentInformationId)
+  override fun requestPayment(cmd: PaymentRequestCommand): Long {
+    paymentInformationService.searchPaymentInformation(cmd.paymentInformationId)
     val payment = Payment(
       LocalDateTime.now(),
       PaymentStatus.PAYMENT_AWAITING,
       cmd.amount,
       cmd.paymentInformationId
     )
-    cmd.contractPaymentInformation
-      .forEach { createContractPaymentDetails(it, payment) }
-
-    return PaymentRequestResponse(
-      paymentRepository.save(payment).id!!,
-      paymentInformation.cardNumber
-    )
+    cmd.contractPaymentInformation.forEach {
+      createContractPaymentDetails(it, payment)
+    }
+    return paymentRepository.save(payment).id!!
   }
 
   private fun createContractPaymentDetails(
     contractPaymentInformation: ContractPaymentInformation,
     payment: Payment
-  ) {
-    contractPaymentInformation.productPaymentInformation
-      .forEach { createProductPaymentDetails(contractPaymentInformation, it, payment) }
-  }
+  ) =
+    contractPaymentInformation.productPaymentInformation.forEach {
+      createProductPaymentDetails(contractPaymentInformation, it, payment)
+    }
 
   private fun createProductPaymentDetails(
     contractPaymentInformation: ContractPaymentInformation,
@@ -90,28 +87,48 @@ class PaymentServiceImpl(
   private fun Long.vat() = truncate(this / 11.0).toLong()
 
   @Transactional(readOnly = true)
-  override fun searchPaymentHistory(id: Long): PaymentHistoryResponse =
+  override fun searchOnePaymentHistory(paymentId: Long): DetailPaymentHistoryResponse =
     paymentRepository
-      .findPaymentWithDetails(id)
-      ?.toPaymentHistoryResponse()
-      ?: throw IllegalArgumentException("$id not found!")
+      .findPaymentWithDetails(paymentId)
+      ?.toDetailPaymentHistoryResponse()
+      ?: throw IllegalArgumentException("$paymentId not found!")
 
-  private fun Payment.toPaymentHistoryResponse(): PaymentHistoryResponse {
+  @Transactional(readOnly = true)
+  override fun searchPaymentHistories(paymentInformationId: Long): List<SummaryPaymentHistoryResponse> =
+    paymentRepository
+      .findByPaymentInformationId(paymentInformationId)
+      .map { it.toSummaryPaymentHistoryResponse() }
+
+  private fun Payment.toSummaryPaymentHistoryResponse(): SummaryPaymentHistoryResponse {
+    return SummaryPaymentHistoryResponse(
+      paymentId = id!!,
+      paymentInformationId = paymentInformationId,
+      paymentRequestDateTime = paymentRequestedDateTime,
+      paymentCompletedDateTime = paymentCompletedDateTime,
+      paymentFailedDateTime = paymentFailedDateTime,
+      paymentFailedCauseMessage = paymentFailedCauseMessage,
+      paymentAmount = amount,
+      paymentStatus = paymentStatus.name,
+    )
+  }
+
+  private fun Payment.toDetailPaymentHistoryResponse(): DetailPaymentHistoryResponse {
     val paymentHistoryPerContractResponse =
       paymentDetails
         .groupingBy { it.contractId }
         .eachSumBy { it.amount }
         .map { PaymentHistoryPerContractResponse(it.key, it.value) }
-    return PaymentHistoryResponse(
-      id!!,
-      paymentInformationId,
-      paymentRequestedDateTime,
-      paymentCompletedDateTime,
-      paymentFailedDateTime,
-      paymentFailedCauseMessage,
-      amount,
-      paymentStatus.name,
-      paymentHistoryPerContractResponse
+
+    return DetailPaymentHistoryResponse(
+      paymentId = id!!,
+      paymentInformationId = paymentInformationId,
+      paymentRequestDateTime = paymentRequestedDateTime,
+      paymentCompletedDateTime = paymentCompletedDateTime,
+      paymentFailedDateTime = paymentFailedDateTime,
+      paymentFailedCauseMessage = paymentFailedCauseMessage,
+      paymentAmount = amount,
+      paymentStatus = paymentStatus.name,
+      paymentHistoryPerContracts = paymentHistoryPerContractResponse
     )
   }
 
@@ -121,18 +138,16 @@ class PaymentServiceImpl(
     fold(0) { acc, elem -> acc + selector(elem) }
 
   @Transactional
-  override fun completePayment(cmd: CompletePaymentCommand) {
+  override fun completePayment(cmd: PaymentCompleteCommand) =
     paymentRepository
       .findByIdOrNull(cmd.paymentId)
       ?.complete(cmd.paymentCompletedDateTime, cmd.amount)
       ?: throw IllegalStateException("Payment(${cmd.paymentId}) not exists!")
-  }
 
   @Transactional
-  override fun failPayment(cmd: FailPaymentCommand) {
+  override fun failPayment(cmd: PaymentFailCommand) =
     paymentRepository
       .findByIdOrNull(cmd.paymentId)
       ?.fail(cmd.paymentFailedDateTime, cmd.paymentFailedCauseMessage)
       ?: throw IllegalStateException("Payment(${cmd.paymentId}) not exists!")
-  }
 }

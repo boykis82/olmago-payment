@@ -37,13 +37,13 @@ data class PaymentRequestCommand(
   val contractPaymentInformation: List<ContractPaymentInformation>
 )
 
-data class CompletePaymentCommand(
+data class PaymentCompleteCommand(
   val paymentId: Long,
   val paymentCompletedDateTime: LocalDateTime,
   val amount: Long
 )
 
-data class FailPaymentCommand(
+data class PaymentFailCommand(
   val paymentId: Long,
   val paymentFailedDateTime: LocalDateTime,
   val paymentFailedCauseMessage: String

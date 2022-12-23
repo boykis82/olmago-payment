@@ -17,7 +17,7 @@ data class PaymentHistoryPerContractResponse(
   val paymentAmount: Long
 )
 
-data class PaymentHistoryResponse(
+data class DetailPaymentHistoryResponse(
   val paymentId: Long,
   val paymentInformationId: Long,
   val paymentRequestDateTime: LocalDateTime,
@@ -27,4 +27,15 @@ data class PaymentHistoryResponse(
   val paymentAmount: Long,
   val paymentStatus: String,
   val paymentHistoryPerContracts: List<PaymentHistoryPerContractResponse>
+)
+
+data class SummaryPaymentHistoryResponse(
+  val paymentId: Long,
+  val paymentInformationId: Long,
+  val paymentRequestDateTime: LocalDateTime,
+  val paymentCompletedDateTime: LocalDateTime?,
+  val paymentFailedDateTime: LocalDateTime?,
+  val paymentFailedCauseMessage: String?,
+  val paymentAmount: Long,
+  val paymentStatus: String,
 )

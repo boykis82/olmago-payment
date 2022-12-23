@@ -14,13 +14,13 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.data.repository.findByIdOrNull
 import team.caltech.olmago.payment.domain.*
-import team.caltech.olmago.payment.service.createPaymentInformationRegisterCommand
-import team.caltech.olmago.payment.service.createPaymentRequestCommand
+import team.caltech.olmago.payment.service.TestSpecificLanguage.Companion.createPaymentInformationRegisterCommand
+import team.caltech.olmago.payment.service.TestSpecificLanguage.Companion.createPaymentRequestCommand
 import team.caltech.olmago.payment.service.dto.*
 import java.time.LocalDateTime
 
 @SpringBootTest
-class PaymentServiceTest : StringSpec() {
+class PaymentCommandTest : StringSpec() {
   override fun extensions() = listOf(SpringExtension)
 
   @Autowired
@@ -87,10 +87,10 @@ class PaymentServiceTest : StringSpec() {
       
       // act
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)      
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
       
       // assert
-      val response = paymentService.searchPaymentHistory(paymentId)
+      val response = paymentService.searchOnePaymentHistory(paymentId)
       response.paymentId shouldBe paymentId
       response.paymentInformationId shouldBe createPaymentRequestCommand.paymentInformationId
       response.paymentAmount shouldBe createPaymentRequestCommand.amount
@@ -108,18 +108,18 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
       
       // act
-      val completePaymentCommand = CompletePaymentCommand(
+      val paymentCompleteCommand = PaymentCompleteCommand(
         paymentId = paymentId,
         paymentCompletedDateTime = LocalDateTime.now(),
         amount = createPaymentRequestCommand.amount
       )
-      paymentService.completePayment(completePaymentCommand)
+      paymentService.completePayment(paymentCompleteCommand)
       
       // assert
-      val response = paymentService.searchPaymentHistory(paymentId)
+      val response = paymentService.searchOnePaymentHistory(paymentId)
       response.paymentId shouldBe paymentId
       response.paymentStatus shouldBe "PAYMENT_COMPLETED"
       response.paymentCompletedDateTime!!.shouldHaveSameDayAs(LocalDateTime.now())
@@ -131,19 +131,19 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
 
       // act & assert
-      val completePaymentCommand = CompletePaymentCommand(
+      val paymentCompleteCommand = PaymentCompleteCommand(
         paymentId = paymentId,
         paymentCompletedDateTime = LocalDateTime.now(),
         amount = createPaymentRequestCommand.amount + 1000
       )
       val ex = shouldThrow<IllegalStateException> {
-        paymentService.completePayment(completePaymentCommand)
+        paymentService.completePayment(paymentCompleteCommand)
       }
       ex shouldHaveMessage
-          "payment amounts are different(initial = ${createPaymentRequestCommand.amount}, this time = ${completePaymentCommand.amount})"
+          "payment amounts are different(initial = ${createPaymentRequestCommand.amount}, this time = ${paymentCompleteCommand.amount})"
     }
 
 
@@ -153,18 +153,18 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
 
-      val completePaymentCommand = CompletePaymentCommand(
+      val paymentCompleteCommand = PaymentCompleteCommand(
         paymentId = paymentId,
         paymentCompletedDateTime = LocalDateTime.now(),
         amount = createPaymentRequestCommand.amount
       )
-      paymentService.completePayment(completePaymentCommand)
+      paymentService.completePayment(paymentCompleteCommand)
 
       // act & assert
       val ex = shouldThrow<IllegalStateException> {
-        paymentService.completePayment(completePaymentCommand)
+        paymentService.completePayment(paymentCompleteCommand)
       }
       ex shouldHaveMessage "payment status is already completed"
     }
@@ -175,25 +175,25 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
 
-      val failPaymentCommand = FailPaymentCommand(
+      val paymentFailCommand = PaymentFailCommand(
         paymentId = paymentId,
         paymentFailedDateTime = LocalDateTime.now(),
         paymentFailedCauseMessage = "정지된 카드"
       )
-      paymentService.failPayment(failPaymentCommand)
+      paymentService.failPayment(paymentFailCommand)
 
       // act
-      val completePaymentCommand = CompletePaymentCommand(
+      val paymentCompleteCommand = PaymentCompleteCommand(
         paymentId = paymentId,
         paymentCompletedDateTime = LocalDateTime.now(),
         amount = createPaymentRequestCommand.amount
       )
-      paymentService.completePayment(completePaymentCommand)
+      paymentService.completePayment(paymentCompleteCommand)
 
       // assert
-      val response = paymentService.searchPaymentHistory(paymentId)
+      val response = paymentService.searchOnePaymentHistory(paymentId)
       response.paymentId shouldBe paymentId
       response.paymentStatus shouldBe "PAYMENT_COMPLETED"
       response.paymentCompletedDateTime!!.shouldHaveSameDayAs(LocalDateTime.now())
@@ -207,22 +207,22 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
-      val completePaymentCommand = CompletePaymentCommand(
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
+      val paymentCompleteCommand = PaymentCompleteCommand(
         paymentId = paymentId,
         paymentCompletedDateTime = LocalDateTime.now(),
         amount = createPaymentRequestCommand.amount
       )
-      paymentService.completePayment(completePaymentCommand)
+      paymentService.completePayment(paymentCompleteCommand)
 
       // act & assert
-      val failPaymentCommand = FailPaymentCommand(
+      val paymentFailCommand = PaymentFailCommand(
         paymentId = paymentId,
         paymentFailedDateTime = LocalDateTime.now(),
         paymentFailedCauseMessage = "정지된 카드"
       )
       val ex = shouldThrow<IllegalStateException> {
-        paymentService.failPayment(failPaymentCommand)
+        paymentService.failPayment(paymentFailCommand)
       }
       ex shouldHaveMessage "payment status is already completed"
     }
@@ -233,22 +233,22 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
 
       // act
-      val failPaymentCommand = FailPaymentCommand(
+      val paymentFailCommand = PaymentFailCommand(
         paymentId = paymentId,
         paymentFailedDateTime = LocalDateTime.now(),
         paymentFailedCauseMessage = "정지된 카드"
       )
-      paymentService.failPayment(failPaymentCommand)
+      paymentService.failPayment(paymentFailCommand)
 
       // assert
-      val response = paymentService.searchPaymentHistory(paymentId)
+      val response = paymentService.searchOnePaymentHistory(paymentId)
       response.paymentId shouldBe paymentId
       response.paymentStatus shouldBe "PAYMENT_FAILED"
       response.paymentCompletedDateTime shouldBe null
-      response.paymentFailedDateTime!!.shouldHaveSameDayAs(failPaymentCommand.paymentFailedDateTime)
+      response.paymentFailedDateTime!!.shouldHaveSameDayAs(paymentFailCommand.paymentFailedDateTime)
       response.paymentFailedCauseMessage!! shouldContain "정지된 카드"
     }
 
@@ -258,16 +258,16 @@ class PaymentServiceTest : StringSpec() {
         createPaymentInformationRegisterCommand()
       )
       val createPaymentRequestCommand = createPaymentRequestCommand(paymentInformationId)
-      val paymentId = paymentService.requestPayment(createPaymentRequestCommand).paymentId
+      val paymentId = paymentService.requestPayment(createPaymentRequestCommand)
 
       // act & assert
-      val completePaymentCommand = CompletePaymentCommand(
+      val paymentCompleteCommand = PaymentCompleteCommand(
         paymentId = paymentId + 1,
         paymentCompletedDateTime = LocalDateTime.now(),
         amount = createPaymentRequestCommand.amount
       )
       val ex = shouldThrow<IllegalStateException> {
-        paymentService.completePayment(completePaymentCommand)
+        paymentService.completePayment(paymentCompleteCommand)
       }
     }
 
